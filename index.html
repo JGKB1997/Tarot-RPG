@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lettura Tarocchi - Selezione Direzione</title>
+    <title>Lettura Tarocchi - Tarot RPG</title>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -24,7 +24,6 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             margin-bottom: 30px;
         }
-        input[type="file"] { margin-bottom: 20px; color: #8a8a9e; }
         
         .inputs-container {
             display: flex;
@@ -120,12 +119,9 @@
 <body>
 
     <h1>Lettore di Tarocchi Personale</h1>
-    <div class="subtitle">Scegli quante carte estrarre dritte o capovolte dalla tua cartella locale</div>
+    <div class="subtitle">Mazzo automatico caricato dalla cartella "Tarot RPG"</div>
 
     <div class="controls">
-        <label for="folderInput"><strong>1. Carica la cartella del mazzo:</strong></label><br>
-        <input type="file" id="folderInput" webkitdirectory directory multiple><br>
-        
         <div class="inputs-container">
             <div class="input-group">
                 <label for="straightCount" class="status-dritta">Carte Dritte △</label>
@@ -143,25 +139,26 @@
     <div id="canvas"></div>
 
     <script>
-        let mazzoOriginale = [];
+        // Nome della cartella nella tua repository (esattamente come scritta su GitHub)
+        const NOME_CARTELLA = "Tarot RPG";
 
-        document.getElementById('folderInput').addEventListener('change', function(e) {
-            const files = e.target.files;
-            mazzoOriginale = Array.from(files).filter(file => file.type.startsWith('image/'));
-            
-            if(mazzoOriginale.length > 0) {
-                alert(`Mazzo caricato con successo! Trovate ${mazzoOriginale.length} carte.`);
-            } else {
-                alert("Nessuna immagine trovata nella cartella selezionata.");
-            }
-        });
+        // IMPORTANTE: Inserisci qui l'elenco esatto dei nomi dei tuoi file immagine presenti nella cartella.
+        // Includi l'estensione (es. .jpg, .png).
+        const mazzoOriginale = [
+            "00_Il_Matto.png",
+            "01_Il_Bagatto.png",
+            "02_La_Papessa.png",
+            "03_L_Imperatrice.png",
+            "04_L_Imperatore.png"
+            // Aggiungi qui tutte le altre tue carte seguendo lo stesso formato...
+        ];
 
         function pescaCarte() {
             const canvas = document.getElementById('canvas');
             canvas.innerHTML = ''; 
             
             if (mazzoOriginale.length === 0) {
-                alert("Per favore, seleziona prima la cartella contenente i tuoi tarocchi!");
+                alert("Configura prima l'elenco delle carte dentro il codice JavaScript!");
                 return;
             }
 
@@ -170,16 +167,16 @@
             const totaliRichieste = dritteRichieste + capovolteRichieste;
             
             if (totaliRichieste === 0) {
-                alert("Seleziona almeno 1 carta da pescare (dritta o capovolta).");
+                alert("Seleziona almeno 1 carta da pescare.");
                 return;
             }
 
             if (totaliRichieste > mazzoOriginale.length) {
-                alert(`Impossibile pescare ${totaliRichieste} carte senza ripetizioni. Il tuo mazzo ne contiene solo ${mazzoOriginale.length}.`);
+                alert(`Impossibile pescare ${totaliRichieste} carte senza ripetizioni. Il mazzo configurato ne contiene solo ${mazzoOriginale.length}.`);
                 return;
             }
 
-            // Clona il mazzo per estrarre senza ripetizioni
+            // Clona il mazzo dei nomi dei file per estrarre senza ripetizioni
             let mazzoDisponibile = [...mazzoOriginale]; 
             
             // 1. Estrae le carte dritte
@@ -192,9 +189,13 @@
         function estraiPerDirezione(mazzo, quante, èDritta, contenitoreVisivo) {
             for (let i = 0; i < quante; i++) {
                 const randomIndex = Math.floor(Math.random() * mazzo.length);
-                const fileCarta = mazzo.splice(randomIndex, 1)[0];
+                const nomeFileCompleto = mazzo.splice(randomIndex, 1)[0];
                 
-                const nomeCarta = fileCarta.name.replace(/\.[^/.]+\$/, "").replace(/[-_]/g, " ");
+                // Genera il titolo visibile rimuovendo l'estensione del file e sostituendo i trattini
+                const nomeVisualizzato = nomeFileCompleto.replace(/\.[^/.]+\$/, "").replace(/[-_]/g, " ");
+
+                // Costruisce il percorso relativo corretto per GitHub Pages (gestisce gli spazi nel nome della cartella)
+                const percorsoImmagine = `${encodeURIComponent(NOME_CARTELLA)}/${encodeURIComponent(nomeFileCompleto)}`;
 
                 const cardContainer = document.createElement('div');
                 cardContainer.className = 'card-container';
@@ -203,7 +204,7 @@
                 imageWrapper.className = 'image-wrapper';
 
                 const img = document.createElement('img');
-                img.src = URL.createObjectURL(fileCarta);
+                img.src = percorsoImmagine;
                 
                 let statoTesto = "";
                 if (!èDritta) {
@@ -218,7 +219,7 @@
                 
                 const cardInfo = document.createElement('div');
                 cardInfo.className = 'card-info';
-                cardInfo.innerHTML = `<strong>${nomeCarta}</strong><br>${statoTesto}`;
+                cardInfo.innerHTML = `<strong>${nomeVisualizzato}</strong><br>${statoTesto}`;
                 cardContainer.appendChild(cardInfo);
 
                 contenitoreVisivo.appendChild(cardContainer);
