@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lettura Tarocchi - Selezione Direzione</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            text-align: center; 
+            background: #1a1a2e; 
+            color: #e2e2e2; 
+            padding: 20px; 
+            margin: 0;
+        }
+        h1 { color: #e94560; margin-bottom: 5px; }
+        .subtitle { color: #8a8a9e; font-style: italic; margin-bottom: 25px; }
+        
+        .controls {
+            background: #161624;
+            padding: 20px;
+            border-radius: 12px;
+            display: inline-block;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+        input[type="file"] { margin-bottom: 20px; color: #8a8a9e; }
+        
+        .inputs-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .input-group label {
+            font-size: 14px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="number"] { 
+            width: 70px; 
+            padding: 8px; 
+            border-radius: 5px; 
+            border: 1px solid #444; 
+            background: #0f0f1a; 
+            color: #fff; 
+            text-align: center;
+            font-size: 16px;
+        }
+        
+        button { 
+            padding: 12px 30px; 
+            font-size: 16px; 
+            font-weight: bold;
+            cursor: pointer; 
+            background: #e94560; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            transition: background 0.2s;
+        }
+        button:hover { background: #ff5270; }
+        
+        #canvas { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            gap: 25px; 
+            margin-top: 20px; 
+        }
+        
+        .card-container {
+            background: #161624;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            width: 200px;
+            text-align: center;
+        }
+        
+        .image-wrapper {
+            width: 200px;
+            height: 320px; 
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: #0f0f1a;
+        }
+
+        img { 
+            max-width: 100%; 
+            max-height: 100%; 
+            object-fit: contain;
+            transition: transform 0.3s;
+        }
+        
+        .reversed { 
+            transform: rotate(180deg); 
+        }
+        
+        .card-info {
+            margin-top: 12px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .status-dritta { color: #4e9f3d; }
+        .status-capovolta { color: #d9455f; }
+    </style>
+</head>
+<body>
+
+    <h1>Lettore di Tarocchi Personale</h1>
+    <div class="subtitle">Scegli quante carte estrarre dritte o capovolte dalla tua cartella locale</div>
+
+    <div class="controls">
+        <label for="folderInput"><strong>1. Carica la cartella del mazzo:</strong></label><br>
+        <input type="file" id="folderInput" webkitdirectory directory multiple><br>
+        
+        <div class="inputs-container">
+            <div class="input-group">
+                <label for="straightCount" class="status-dritta">Carte Dritte △</label>
+                <input type="number" id="straightCount" value="2" min="0">
+            </div>
+            <div class="input-group">
+                <label for="reversedCount" class="status-capovolta">Carte Capovolte ▽</label>
+                <input type="number" id="reversedCount" value="1" min="0">
+            </div>
+        </div>
+        
+        <button onclick="pescaCarte()">Pesca dal Mazzo</button>
+    </div>
+
+    <div id="canvas"></div>
+
+    <script>
+        let mazzoOriginale = [];
+
+        document.getElementById('folderInput').addEventListener('change', function(e) {
+            const files = e.target.files;
+            mazzoOriginale = Array.from(files).filter(file => file.type.startsWith('image/'));
+            
+            if(mazzoOriginale.length > 0) {
+                alert(`Mazzo caricato con successo! Trovate ${mazzoOriginale.length} carte.`);
+            } else {
+                alert("Nessuna immagine trovata nella cartella selezionata.");
+            }
+        });
+
+        function pescaCarte() {
+            const canvas = document.getElementById('canvas');
+            canvas.innerHTML = ''; 
+            
+            if (mazzoOriginale.length === 0) {
+                alert("Per favore, seleziona prima la cartella contenente i tuoi tarocchi!");
+                return;
+            }
+
+            const dritteRichieste = parseInt(document.getElementById('straightCount').value) || 0;
+            const capovolteRichieste = parseInt(document.getElementById('reversedCount').value) || 0;
+            const totaliRichieste = dritteRichieste + capovolteRichieste;
+            
+            if (totaliRichieste === 0) {
+                alert("Seleziona almeno 1 carta da pescare (dritta o capovolta).");
+                return;
+            }
+
+            if (totaliRichieste > mazzoOriginale.length) {
+                alert(`Impossibile pescare ${totaliRichieste} carte senza ripetizioni. Il tuo mazzo ne contiene solo ${mazzoOriginale.length}.`);
+                return;
+            }
+
+            // Clona il mazzo per estrarre senza ripetizioni
+            let mazzoDisponibile = [...mazzoOriginale]; 
+            
+            // 1. Estrae le carte dritte
+            estraiPerDirezione(mazzoDisponibile, dritteRichieste, true, canvas);
+            
+            // 2. Estrae le carte capovolte dal mazzo rimasto
+            estraiPerDirezione(mazzoDisponibile, capovolteRichieste, false, canvas);
+        }
+
+        function estraiPerDirezione(mazzo, quante, èDritta, contenitoreVisivo) {
+            for (let i = 0; i < quante; i++) {
+                const randomIndex = Math.floor(Math.random() * mazzo.length);
+                const fileCarta = mazzo.splice(randomIndex, 1)[0];
+                
+                const nomeCarta = fileCarta.name.replace(/\.[^/.]+\$/, "").replace(/[-_]/g, " ");
+
+                const cardContainer = document.createElement('div');
+                cardContainer.className = 'card-container';
+
+                const imageWrapper = document.createElement('div');
+                imageWrapper.className = 'image-wrapper';
+
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(fileCarta);
+                
+                let statoTesto = "";
+                if (!èDritta) {
+                    img.className = 'reversed';
+                    statoTesto = '<span class="status-capovolta">Capovolta ▽</span>';
+                } else {
+                    statoTesto = '<span class="status-dritta">Dritta △</span>';
+                }
+
+                imageWrapper.appendChild(img);
+                cardContainer.appendChild(imageWrapper);
+                
+                const cardInfo = document.createElement('div');
+                cardInfo.className = 'card-info';
+                cardInfo.innerHTML = `<strong>${nomeCarta}</strong><br>${statoTesto}`;
+                cardContainer.appendChild(cardInfo);
+
+                contenitoreVisivo.appendChild(cardContainer);
+            }
+        }
+    </script>
+</body>
+</html>
